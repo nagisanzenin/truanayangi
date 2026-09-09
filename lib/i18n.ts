@@ -15,6 +15,7 @@ export const copy = {
     newItem: 'VẬT PHẨM MỚI', referencePrice: 'Giá tham khảo', perPerson: '/ người', find: 'TÌM QUÁN', continue: 'TIẾP TỤC', nearby: 'gần đây',
     whatsInside: 'TRONG HÒM CÓ GÌ?', items: 'Vật phẩm trong hòm', mystery: '★ MÓN BÍ ẨN', mysteryAlt: 'Món bí ẩn hạng vàng',
     footer: 'Fan-made · SFX: Valve /', lunchDish: 'Món ăn trưa', vegetarianDish: 'Chay',
+    category: 'Loại món', allCategories: 'Tất cả',
   },
   en: {
     tiers: ['MIL-SPEC', 'RESTRICTED', 'CLASSIFIED', 'COVERT', '★ SPECIAL ITEM'],
@@ -28,6 +29,7 @@ export const copy = {
     newItem: 'NEW ITEM', referencePrice: 'Typical price', perPerson: '/ person', find: 'FIND NEARBY', continue: 'CONTINUE', nearby: 'near me',
     whatsInside: "WHAT'S IN THE CASE?", items: 'Items in this case', mystery: '★ MYSTERY DISH', mysteryAlt: 'Gold-tier mystery dish',
     footer: 'Fan-made · SFX: Valve /', lunchDish: 'Lunch dish', vegetarianDish: 'Vegetarian',
+    category: 'Category', allCategories: 'All',
   },
 } as const;
 

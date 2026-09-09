@@ -1,5 +1,31 @@
 import { priceRarity } from './case-mechanics';
-export type Food={customId?:string;name:string;sub:string;price:number;rarity:number;image:number;veg?:boolean;quip:string};
+export type Category = 'com' | 'pho-bun' | 'mi' | 'mon-kho' | 'chao-lau' | 'salad';
+export const CATEGORIES: readonly { id: Category; vi: string; en: string }[] = [
+  { id: 'com', vi: 'Cơm', en: 'Rice' },
+  { id: 'pho-bun', vi: 'Phở & Bún', en: 'Pho & Noodles' },
+  { id: 'mi', vi: 'Mì', en: 'Noodles & Pasta' },
+  { id: 'mon-kho', vi: 'Món khô', en: 'Dry dishes' },
+  { id: 'chao-lau', vi: 'Cháo & Lẩu', en: 'Congee & Hotpot' },
+  { id: 'salad', vi: 'Salad', en: 'Salad' },
+];
+export type Food={customId?:string;name:string;sub:string;price:number;rarity:number;image:number;veg?:boolean;quip:string;cat:Category};
+const categoryMap: Record<number, Category> = {
+  0:'com',1:'pho-bun',2:'mon-kho',3:'pho-bun',4:'mon-kho',5:'mon-kho',6:'mon-kho',7:'com',8:'com',
+  9:'com',10:'pho-bun',11:'pho-bun',12:'mi',13:'pho-bun',14:'mon-kho',15:'pho-bun',16:'com',17:'com',
+  18:'mon-kho',19:'pho-bun',20:'mi',21:'pho-bun',22:'mon-kho',23:'chao-lau',24:'mi',25:'mi',26:'com',
+  27:'mon-kho',28:'mon-kho',29:'mi',30:'mi',31:'mi',32:'chao-lau',33:'mi',34:'mon-kho',35:'mon-kho',
+  36:'com',39:'com',42:'pho-bun',43:'pho-bun',44:'mon-kho',45:'com',46:'com',47:'com',48:'mi',
+  49:'mon-kho',50:'mi',51:'salad',52:'mi',53:'mi',54:'mon-kho',55:'mon-kho',56:'com',57:'com',
+  58:'mi',59:'com',60:'salad',61:'salad',62:'mon-kho',63:'mon-kho',64:'com',65:'com',66:'com',
+  67:'salad',68:'mon-kho',69:'mon-kho',70:'mi',71:'chao-lau',72:'pho-bun',73:'pho-bun',74:'pho-bun',
+  75:'pho-bun',76:'pho-bun',77:'pho-bun',78:'pho-bun',79:'pho-bun',80:'pho-bun',81:'pho-bun',
+  82:'chao-lau',83:'chao-lau',84:'mon-kho',85:'mon-kho',86:'mon-kho',87:'mi',88:'mi',89:'mi',
+  90:'com',91:'com',92:'com',93:'com',94:'mi',95:'mi',96:'mi',97:'com',98:'com',99:'mon-kho',
+  100:'com',101:'chao-lau',102:'chao-lau',103:'mon-kho',104:'com',105:'mon-kho',106:'mon-kho',
+  107:'mon-kho',108:'mon-kho',109:'mon-kho',110:'mon-kho',111:'mon-kho',112:'mon-kho',113:'mon-kho',
+  114:'mi',115:'mi',116:'mi',117:'com',118:'mi',119:'mon-kho',120:'mi',121:'chao-lau',122:'chao-lau',
+  123:'com',124:'mon-kho',125:'com',126:'com',127:'mi',128:'mi',129:'mon-kho',130:'mi',131:'mi',
+};
 // Approximate lunch portion prices in thousands of VND, not restaurant quotes.
 export const foods:Food[]=[
   {
@@ -975,4 +1001,5 @@ export const foods:Food[]=[
   "quip": "Miến này không phải miếng mồi deadline.",
   "image": 131
 }
-].map(food=>({...food,rarity:priceRarity(food.price)}));
+].map(food=>({...food,rarity:priceRarity(food.price),cat:categoryMap[food.image]??'mon-kho' as Category}));
+
