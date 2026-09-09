@@ -4,7 +4,7 @@ Vietnamese lunch case-opening parody. 36 meals, budget and vegetarian filters, o
 
 ## Timing reference
 
-The archived CS:GO Panorama client exposes a 2.3 s case-model lead-in plus 0.1 s scroll preparation, a 6 s scroll, cubic-bezier(0.075, 0.82, 0.165, 1), 38 decorative tiles, 42 fixed tick timestamps, and integer landing offsets from 10–90% of the winning tile. The web implementation uses a compositor-driven rightward animation. It rebases the strip while preserving the exact visible cards and their positions, without a case overlay.
+The archived CS:GO Panorama client exposes a 2.3 s case-model lead-in plus 0.1 s scroll preparation, a 6 s scroll, cubic-bezier(0.075, 0.82, 0.165, 1), 38 decorative tiles, 42 fixed tick timestamps, and integer landing offsets from 10–90% of the winning tile. The web implementation uses a compositor-driven animation and hides all reel resets behind the case view.
 
 References:
 - https://github.com/Desynci/CSGO_Panorama_Code.pbin/blob/main/panorama/scripts/popups/popup_capability_decodable.js
@@ -15,7 +15,7 @@ The 625:125:25:5:2 rarity weights reproduce the published standard weapon-case t
 
 Rarity follows approximate VND price/person: blue ≤40k, purple ≤65k, pink ≤100k, red ≤130k, gold >130k.
 
-This is a browser adaptation, not Valve's engine or backend. The case overlay is intentionally omitted. Food art, filtered pools and meal outcomes are intentionally different. Reduced-motion mode keeps timing but suppresses reel motion.
+This is a browser adaptation, not Valve's engine or backend. The case lead-in is a 2D animation rather than the original 3D model animation. Food art, filtered pools and meal outcomes are intentionally different. Reduced-motion mode keeps timing but suppresses reel motion.
 
 ## Assets
 
@@ -28,3 +28,8 @@ Case image: Steam economy image referenced by https://github.com/ByMykel/CSGO-AP
 npm install
 npm run dev
 npm run build
+
+
+### Find or order the chosen meal
+
+The result links to Google Maps. On small screens or touch devices, a green GrabFood button opens the Vietnamese GrabFood search with the original dish name (including custom dishes). It uses the HTTPS search link tested on a real phone; app handoff depends on Grab and browser/device settings. There is no forced timer redirect, location request, or checkout integration. Google Maps remains available.
