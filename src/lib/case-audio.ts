@@ -1,4 +1,4 @@
-const names = ['csgo_ui_crate_open', 'csgo_ui_crate_item_scroll', 'item_reveal3_rare', 'item_reveal4_mythical', 'item_reveal5_legendary', 'item_reveal6_ancient'] as const;
+const names = ['csgo_ui_crate_drop', 'csgo_ui_crate_open', 'csgo_ui_crate_item_scroll', 'item_reveal3_rare', 'item_reveal4_mythical', 'item_reveal5_legendary', 'item_reveal6_ancient'] as const;
 export type CaseSound = typeof names[number];
 
 /** One gesture-unlocked context; ticks reuse decoded buffers, never media players. */

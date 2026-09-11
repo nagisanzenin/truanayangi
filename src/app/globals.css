@@ -191,8 +191,52 @@ html{scrollbar-gutter:stable}.reel-window{overflow:clip}.reel-track{transform:tr
   .brand-logo { width: 40px; height: 40px; }
 }
 
+/* Every keyframe below lists the same transform functions in the same order,
+   so the browser interpolates instead of snapping between them. */
+@keyframes unlock-case {
+  0%   { transform: scale(.86) rotate(-4deg) translateY(0);     filter: brightness(.82) }
+  30%  { transform: scale(1) rotate(0deg) translateY(0);        filter: brightness(1) }
+  55%  { transform: scale(1.02) rotate(.6deg) translateY(-6px); filter: brightness(1.06) }
+  78%  { transform: scale(1.05) rotate(-.4deg) translateY(-2px);filter: brightness(1.18) }
+  100% { transform: scale(1.13) rotate(0deg) translateY(0);     filter: brightness(1.5) }
+}
+@keyframes unlock-veil { from { opacity: 0 } to { opacity: 1 } }
+@keyframes unlock-veil-out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes unlock-label { 0% { opacity: 0; transform: translateY(6px) } 40%,100% { opacity: 1; transform: translateY(0) } }
+
+.case-unlock { animation: unlock-veil .32s ease-out both }
+.case-unlock span { animation: unlock-label 1s ease-out both }
+.unlocking .case-unlock img { animation: unlock-case 2.4s cubic-bezier(.22,.61,.36,1) both }
+/* Hold the crate on its final frame while the veil fades over the spin. */
+.case-unlock.closing { animation: unlock-veil-out .38s ease-in both; pointer-events: none }
+.case-unlock.closing img { transform: scale(1.13); filter: brightness(1.5) }
+
+.inventory-button{height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#d8dde1;border:1px solid #ffffff2b;background:#1d2932b8;font-size:13px}
+.inventory-button:hover:not(:disabled){background:#2b3a45;border-color:#ffffff4a}
+.inventory-button b{font-weight:500;color:#dec989;font-variant-numeric:tabular-nums}
+.inventory-dialog[data-slot=dialog-content]{max-width:min(1080px,94vw);width:min(1080px,94vw);max-height:88dvh;overflow:auto;border-radius:0;background:linear-gradient(#1f2d38f8,#2c3a45f2);gap:10px}
+.inventory-dialog-title{font-size:20px!important;font-weight:400!important}
+.inventory-dialog-lead{font-size:13px;color:#aebbc5}
+.inventory-empty{color:#b4bfc7;font-size:13px;margin:18px 0}
+.trade-status{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:10px 0;border-top:1px solid #ffffff20;border-bottom:1px solid #ffffff20;font-size:13px;color:#cfd7dd}
+.trade-status strong{color:#dec989;font-weight:500;font-variant-numeric:tabular-nums}
+.trade-note{color:#e2c98c}
+.inventory-owned{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;padding:4px 0}
+.owned-card{padding:0 0 12px;text-align:left;border:0;border-bottom:5px solid var(--rarity);background:linear-gradient(0deg,color-mix(in srgb,var(--rarity),transparent 65%),#34414d 90%);position:relative}
+.owned-card.picked{outline:2px solid #dfc681;outline-offset:-2px;filter:brightness(1.2)}
+.owned-card .card-copy{padding:0 8px}
+.owned-card .card-copy strong{font-size:12px;font-weight:400}
+.owned-card .card-copy>span{font-size:11px;color:#c0c5c9}
+.trade-actions{display:flex;gap:12px;align-items:center;justify-content:flex-end;padding-top:12px;border-top:1px solid #ffffff25}
+.trade-cancel{padding:12px 18px;font-size:14px;border:1px solid #ffffff30;background:#243039;color:#d5dbe0}
+@media(max-width:900px){.inventory-owned{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:640px){.inventory-owned{grid-template-columns:repeat(3,minmax(0,1fr))}.inventory-button span{display:none}.inventory-button{padding:0 6px;border:0;background:none}.trade-actions{flex-direction:column-reverse;align-items:stretch}}
+
 /* The crate-opening beat is the feature itself, so it plays even when the
    global reduced-motion rule switches every other animation off. */
 @media (prefers-reduced-motion: reduce) {
-  .unlocking .case-unlock img { animation: unlock-case 2.4s ease-in-out both !important; }
+  .case-unlock { animation: unlock-veil .32s ease-out both !important }
+  .case-unlock span { animation: unlock-label 1s ease-out both !important }
+  .unlocking .case-unlock img { animation: unlock-case 2.4s cubic-bezier(.22,.61,.36,1) both !important }
+  .case-unlock.closing { animation: unlock-veil-out .38s ease-in both !important }
 }
