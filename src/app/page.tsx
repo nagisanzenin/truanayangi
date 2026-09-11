@@ -8,6 +8,9 @@ import { PreferencesPanel } from '@/components/preferences-panel';
 import { usePreferences } from '@/hooks/use-preferences';
 import { personalFoods, personalSelector } from '@/lib/personal-pool';
 import { CaseAudio } from '@/lib/case-audio';
+import { ThemeMusic } from '@/lib/theme-music';
+import { useThemeMusic } from '@/hooks/use-theme-music';
+import { ThemeMusicSelect } from '@/components/theme-music-select';
 import { FoodImage, rarityColors } from '@/components/food-image';
 import { InventoryPanel } from '@/components/inventory-panel';
 import { useInventory } from '@/hooks/use-inventory';
@@ -66,6 +69,38 @@ export default function Home(){
   document.addEventListener('visibilitychange',hide);
   return ()=>{document.removeEventListener('visibilitychange',hide);engine.dispose();audio.current=null};
  },[]);
+ const themeMusic=useThemeMusic();
+ const music=useRef<ThemeMusic|null>(null);
+ useEffect(()=>{
+  const engine=new ThemeMusic(basePath);music.current=engine;
+  const hide=()=>{if(document.hidden)engine.pause();else engine.recover()};
+  document.addEventListener('visibilitychange',hide);
+  return ()=>{document.removeEventListener('visibilitychange',hide);engine.dispose();music.current=null};
+ },[]);
+ useEffect(()=>{if(themeMusic.ready)music.current?.setKit(themeMusic.kit)},[themeMusic.ready,themeMusic.kit]);
+ useEffect(()=>{music.current?.setMuted(!sound)},[sound]);
+ // Ducked for the whole open-to-result beat; restored once the winner dialog
+ // closes, however it closes (Continue, Esc, backdrop click).
+ useEffect(()=>{if(!revealed)music.current?.duck(false)},[revealed]);
+ useEffect(()=>{
+  // One delegated listener covers every button/option without wiring each
+  // one by hand; the Open button keeps its own dedicated crate-open cue.
+  const click=(e:MouseEvent)=>{
+   const target=(e.target as HTMLElement).closest('button,[role=option],[role=menuitem]');
+   if(!target||target.closest('.open-button')||target.hasAttribute('disabled'))return;
+   audio.current?.play('csgo_ui_button_click');
+  };
+  document.addEventListener('click',click);
+  return ()=>document.removeEventListener('click',click);
+ },[]);
+ useEffect(()=>{
+  // Both audio engines need their own gesture-unlocked AudioContext/<audio>;
+  // the page's first click/tap anywhere covers both, so UI clicks and the
+  // background music work before anyone has pressed Open.
+  const unlock=()=>{music.current?.unlock();audio.current?.unlock();window.removeEventListener('pointerdown',unlock)};
+  window.addEventListener('pointerdown',unlock,{once:true});
+  return ()=>window.removeEventListener('pointerdown',unlock);
+ },[]);
  const [visibleStart,setVisibleStart]=useState(0);
  const t=copy[language];
  const inventoryCards=useMemo(()=>[...eligible].sort((a,b)=>a.rarity-b.rarity||a.price-b.price||foodName(a,language).localeCompare(foodName(b,language),language)).map(f=><Card food={f} language={language} small key={f.customId??f.image}/>),[eligible,language]);
@@ -80,6 +115,7 @@ export default function Home(){
  function open(){
   if(busy.current||!validTarget||!eligible.length||!lunchSelector||!track.current||!viewport.current)return;
   audio.current?.unlock();
+  music.current?.duck(true);
   busy.current=true;
   setSpinning(true);setUnlocking(true);setResult(null);setLanded(null);
   // The crate lands, then the unlock cue builds so its peak lands on the flare
@@ -146,7 +182,7 @@ export default function Home(){
    <source media="(max-width: 900px)" srcSet={`${basePath}/brand/icon-cs-v2.webp`}/>
    <img className="brand-logo" src={`${basePath}/brand/logo-cs-v2.webp`} width={180} height={60} alt="Trưa Nay Ăn Gì" fetchPriority="high"/>
   </picture>
- </a><div className="header-actions"><InventoryPanel inventory={inventory.items} population={population} language={language} disabled={spinning} storageError={!!inventory.error} onTradeUp={(spent,food)=>{inventory.spend(spent);inventory.record(food)}}/><PreferencesPanel preferences={preferences} language={language} disabled={spinning}/><button className="language-button" onClick={()=>changeLanguage(language==='vi'?'en':'vi')} aria-label={t.language}>{language==='vi'?'EN':'VI'}</button><button className="sound-button" onClick={()=>{audio.current?.setMuted(sound);setSound(!sound)}} aria-label={sound?t.turnSoundOff:t.turnSoundOn}>{sound?<Volume2 size={18}/>:<VolumeX size={18}/>}<span>{sound?t.soundOn:t.soundOff}</span></button><a className="social-button facebook-button" href="https://www.facebook.com/share/g/19S49GH46A/" target="_blank" rel="noreferrer" aria-label={language==='vi'?'Tham gia nhóm Facebook Trưa Nay Ăn Gì':'Join the Trưa Nay Ăn Gì Facebook group'}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.2 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5h1.7V3.6c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.1H8V13h2.8v8h3.4Z"/></svg><span>Facebook</span></a><a className="github-button" href="https://github.com/truanayangi-com/truanayangi" target="_blank" rel="noreferrer" aria-label={t.github}><svg className="github-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.49v-1.91c-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.66.35-1.12.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.96a9.3 9.3 0 0 1 2.5.35c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.89v2.8c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg><span className="github-label">GitHub</span></a></div></header>
+ </a><div className="header-actions"><InventoryPanel inventory={inventory.items} population={population} language={language} disabled={spinning} storageError={!!inventory.error} onTradeUp={(spent,food)=>{inventory.spend(spent);inventory.record(food)}}/><PreferencesPanel preferences={preferences} language={language} disabled={spinning}/><button className="language-button" onClick={()=>changeLanguage(language==='vi'?'en':'vi')} aria-label={t.language}>{language==='vi'?'EN':'VI'}</button><ThemeMusicSelect kit={themeMusic.kit} language={language} onChange={themeMusic.setKit}/><button className="sound-button" onClick={()=>{audio.current?.setMuted(sound);setSound(!sound)}} aria-label={sound?t.turnSoundOff:t.turnSoundOn}>{sound?<Volume2 size={18}/>:<VolumeX size={18}/>}<span>{sound?t.soundOn:t.soundOff}</span></button><a className="social-button facebook-button" href="https://www.facebook.com/share/g/19S49GH46A/" target="_blank" rel="noreferrer" aria-label={language==='vi'?'Tham gia nhóm Facebook Trưa Nay Ăn Gì':'Join the Trưa Nay Ăn Gì Facebook group'}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.2 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5h1.7V3.6c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.1H8V13h2.8v8h3.4Z"/></svg><span>Facebook</span></a><a className="github-button" href="https://github.com/truanayangi-com/truanayangi" target="_blank" rel="noreferrer" aria-label={t.github}><svg className="github-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.49v-1.91c-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.66.35-1.12.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.96a9.3 9.3 0 0 1 2.5.35c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.89v2.8c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg><span className="github-label">GitHub</span></a></div></header>
  <main><>{cookieError&&<p role="status" className="preferences-message">{cookieError}</p>}<div className="intro"><h1>{t.title}</h1></div>
  {!eligible.length&&<p className="preferences-message">{language==='vi'?'Pool không có món phù hợp. Tắt bộ lọc chay hoặc thêm món.':'No matching dishes. Turn off the vegetarian filter or add dishes.'}</p>}
  {counterEnabled&&<p className="local-counter" title={language==='vi'?'Lượt mở trên trình duyệt này, lưu bằng cookie':'Spins on this browser, stored in cookies'}>{language==='vi'?'Bạn đã mở':'You have opened'} <strong>{localSpins===null?'—':new Intl.NumberFormat(language==='vi'?'vi-VN':'en-US').format(localSpins)}</strong> {language==='vi'?'hòm trên trình duyệt này':'cases on this browser'}</p>}

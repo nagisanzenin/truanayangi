@@ -23,6 +23,7 @@ export const copy = {
     tradeUpTopTier: 'Bậc cao nhất: đổi lấy một món khác cùng bậc.',
     tradeUpConfirm: 'ĐỔI 8 MÓN', tradeUpResult: 'MÓN GHÉP ĐƯỢC', tradeUpNone: 'Chưa đủ món để ghép.',
     tradeUpCancel: 'HUỶ', owned: 'sở hữu',
+    themeMusic: 'Nhạc nền', themeMusicLabel: 'Chọn nhạc nền', themeMusicHint: 'Nhạc phát khi mở trang, đổi lúc nào cũng được.',
   },
   en: {
     tiers: ['MIL-SPEC', 'RESTRICTED', 'CLASSIFIED', 'COVERT', '★ SPECIAL ITEM'],
@@ -44,6 +45,7 @@ export const copy = {
     tradeUpTopTier: 'Top tier: trades for another dish of the same tier.',
     tradeUpConfirm: 'TRADE 8 DISHES', tradeUpResult: 'TRADE-UP RESULT', tradeUpNone: 'Not enough dishes to trade.',
     tradeUpCancel: 'CANCEL', owned: 'owned',
+    themeMusic: 'Theme music', themeMusicLabel: 'Choose theme music', themeMusicHint: 'Plays as background music; change it anytime.',
   },
 } as const;
 
