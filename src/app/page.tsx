@@ -141,11 +141,11 @@ export default function Home(){
   const rightEdge=Math.ceil((width-start)/step)+1;
   const items=reel.filter(item=>item.id>=center-Math.ceil(width/step)-2&&item.id<=rightEdge);
   const last=Math.max(...items.map(item=>item.id));
-  const recent:Food[]=[];
+  // No anti-repeat window: like a real CS:GO reel, filler tiles are drawn
+  // independently, so the same dish can appear more than once in a spin.
   for(let id=last+1;id<=target+4;id++){
-   const alternatives=eligible.filter(food=>!recent.includes(food)&&(lunchSelector.probabilities.get(food)??0)>0);
-   const food=id===target?winner:lunchSelector.choose(alternatives.length?alternatives:eligible);
-   items.push({id,food});recent.push(food);if(recent.length>8)recent.shift();
+   const food=id===target?winner:lunchSelector.choose(eligible);
+   items.push({id,food});
   }
   flushSync(()=>{setReel(items);setSpinning(true);setMoving(true);setResult(null)});
   const duration=profile.durationMs;
