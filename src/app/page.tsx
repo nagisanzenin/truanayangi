@@ -1,6 +1,6 @@
 import {readCookie,writeCookie} from '@/lib/cookies';
 'use client';
-import { createSpinProfile, spinProgress, createFoodSelector, stopFraction } from '@/lib/case-mechanics';
+import { createSpinProfile, spinProgress, createFoodSelector, stopFraction, OPENING_DELAY_MS } from '@/lib/case-mechanics';
 import { foods, type Food } from '@/lib/foods';
 import { copy, foodName, foodSubtitle, priceLabel, type Language } from '@/lib/i18n';
 import { useLocalSpinCount } from '@/hooks/use-local-spin-count';
@@ -44,7 +44,7 @@ export default function Home(){
  const {count:localSpins,enabled:counterEnabled,recordSpin}=useLocalSpinCount();
  const [language,setLanguage]=useState<Language>('vi');
  const preferences=usePreferences();
- const [budget,setBudget]=useState('50'),[custom,setCustom]=useState('50'),[veg,setVeg]=useState(false),[sound,setSound]=useState(true),[spinning,setSpinning]=useState(false),[result,setResult]=useState<Food|null>(null),[revealed,setRevealed]=useState(false);
+ const [budget,setBudget]=useState('50'),[custom,setCustom]=useState('50'),[veg,setVeg]=useState(false),[sound,setSound]=useState(true),[spinning,setSpinning]=useState(false),[unlocking,setUnlocking]=useState(false),[result,setResult]=useState<Food|null>(null),[revealed,setRevealed]=useState(false);
  const [reel,setReel]=useState(()=>foods.slice(0,12).map((food,id)=>({food,id}))),[moving,setMoving]=useState(false);
  const busy=useRef(false),viewport=useRef<HTMLDivElement>(null);
  useEffect(()=>{let selected:Language='vi';try{const saved=readCookie<string>('language');selected=saved==='en'||saved==='vi'?saved:'vi'}catch{}setLanguage(selected);document.documentElement.lang=selected;document.title=selected==='en'?'What should I eat for lunch?':'Trưa nay ăn gì?'},[]);
@@ -77,18 +77,25 @@ export default function Home(){
  const position=useRef(-400);
  const attachTrack=useCallback((node:HTMLDivElement|null)=>{track.current=node;if(node)node.style.transform=`translate3d(${position.current}px,0,0)`},[]);
  const frame=useRef(0);
+ const unlockTimer=useRef(0);
  useEffect(()=>{if(spinning||!eligible.length||!lunchSelector)return;setReel(current=>current.map(item=>({...item,food:eligible.find(f=>(f.customId??f.image)===(item.food.customId??item.food.image))??lunchSelector.choose(eligible)})))},[eligible,lunchSelector,spinning]);
- useEffect(()=>()=>{cancelAnimationFrame(frame.current)},[]);
+ useEffect(()=>()=>{cancelAnimationFrame(frame.current);window.clearTimeout(unlockTimer.current)},[]);
  function open(){
   if(busy.current||!validTarget||!eligible.length||!lunchSelector||!track.current||!viewport.current)return;
   audio.current?.unlock();
   busy.current=true;
+  const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setSpinning(true);setUnlocking(true);setResult(null);
+  audio.current?.play('csgo_ui_crate_open');
+  unlockTimer.current=window.setTimeout(()=>{setUnlocking(false);spin(reducedMotion)},reducedMotion?0:OPENING_DELAY_MS);
+ }
+ function spin(reducedMotion:boolean){
+  if(!track.current||!viewport.current||!lunchSelector)return;
   const winner=lunchSelector.choose(eligible);
 
   const step=254,tileWidth=240,width=viewport.current.clientWidth;
   const start=position.current;
   const center=Math.floor((width/2-start)/step);
-  const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const profile=createSpinProfile(Math.random,reducedMotion);
   const target=center+profile.tiles;
   const end=width/2-tileWidth*stopFraction()-target*step;
@@ -104,7 +111,6 @@ export default function Home(){
    items.push({id,food});recent.push(food);if(recent.length>8)recent.shift();
   }
   flushSync(()=>{setReel(items);setSpinning(true);setMoving(true);setResult(null)});
-  audio.current?.play('csgo_ui_crate_open');
   const duration=profile.durationMs;
   const started=performance.now();
   let renderedStart=visibleStart;
@@ -141,7 +147,7 @@ export default function Home(){
  {counterEnabled&&<p className="local-counter" title={language==='vi'?'Lượt mở trên trình duyệt này, lưu bằng cookie':'Spins on this browser, stored in cookies'}>{language==='vi'?'Bạn đã mở':'You have opened'} <strong>{localSpins===null?'—':new Intl.NumberFormat(language==='vi'?'vi-VN':'en-US').format(localSpins)}</strong> {language==='vi'?'hòm trên trình duyệt này':'cases on this browser'}</p>}
  {result&&!spinning&&<p className="local-counter">{language==='vi'?'Lựa chọn gần nhất: ':'Last choice: '}<strong>{foodName(result,language)}</strong></p>}
  <section className="case-panel" aria-label={t.caseLabel}>
- <div className={`reel-window ${moving?'is-spinning':''} `} ref={viewport}><div className="selector-line"/><div className="reel-track" ref={attachTrack}>{reel.filter(({id})=>id>=visibleStart&&id<visibleStart+12).map(({food,id})=><Card key={id} food={food} language={language} slot={id}/>)}</div><div className="reel-fade left"/><div className="reel-fade right"/></div></section>
+ <div className={`reel-window ${moving?'is-spinning':''} ${unlocking?'unlocking':''}`} ref={viewport}>{unlocking&&<div className="case-unlock"><img src={`${basePath}/case.png`} alt="" width={220} height={180}/><span>{t.opening}</span></div>}<div className="selector-line"/><div className="reel-track" ref={attachTrack}>{reel.filter(({id})=>id>=visibleStart&&id<visibleStart+12).map(({food,id})=><Card key={id} food={food} language={language} slot={id}/>)}</div><div className="reel-fade left"/><div className="reel-fade right"/></div></section>
  <div className="control-bar"><div className="filters"><div className="budget"><label id="budget-label">{t.spend}</label><Select value={budget} onValueChange={v=>setBudget(v??'50')} disabled={spinning}><SelectTrigger aria-labelledby="budget-label"><SelectValue>{budget==='custom'?t.custom:priceLabel(budget,language)}</SelectValue></SelectTrigger><SelectContent>{['35','50','75','100','150'].map(v=><SelectItem key={v} value={v}>{priceLabel(v,language)}</SelectItem>)}<SelectItem value="custom">{t.custom}</SelectItem></SelectContent></Select>{budget==='custom'&&<div className="custom-spend"><input aria-label={t.customSpend} aria-invalid={!validTarget} type="number" inputMode="numeric" min="30" max="180" step="1" value={custom} disabled={spinning} onChange={e=>setCustom(e.target.value)}/><span>{t.thousandPerMeal}</span></div>}{!validTarget&&<small className="spend-note" role="alert">{t.spendError}</small>}{validTarget&&eligible.length>0&&(veg||Math.abs(filteredMean-target)>.5)&&<small className="spend-note">{t.vegetarianPool} {priceLabel(Math.round(filteredMean),language,true)} / {language==='vi'?'bữa':'meal'}</small>}</div><label className="veg"><Switch checked={veg} onCheckedChange={setVeg} disabled={spinning} aria-label={t.vegetarianOnly}/><span><Leaf size={15}/> {t.vegetarian}</span></label></div><div className="open-wrap"><button className="open-button" disabled={spinning||!validTarget||!eligible.length} onClick={open}>{spinning?<AudioLines size={22}/>:<Sparkles size={21}/>} {spinning?t.opening:result?t.openAgain:t.open} <span>↗</span></button></div></div>
  <Dialog open={revealed} onOpenChange={setRevealed}><DialogContent className="winner-dialog" showCloseButton={false}>{result&&<><span className="winner-label">{t.newItem}</span><DialogTitle className="winner-title">{foodName(result,language)}</DialogTitle><DialogDescription className="winner-description">{t.referencePrice} · {priceLabel(result.price,language,true)} {t.perPerson}</DialogDescription><div className="winner-art" style={{'--rarity':colors[result.rarity]} as React.CSSProperties}><FoodImage food={result} language={language}/></div><div className="winner-actions"><a className="find-button" href={`https://www.google.com/maps/search/${encodeURIComponent(result.name+' '+t.nearby)}`} target="_blank" rel="noreferrer">{t.find} <ArrowUpRight size={16}/></a><a className="grabfood-button" href={`https://food.grab.com/vn/vi/restaurants?${new URLSearchParams({search:result.name,'support-deeplink':'true',searchParameter:result.name})}`} target="_blank" rel="noreferrer" aria-label={language==='vi'?`Đặt ${result.name} qua GrabFood`:`Find ${foodName(result,language)} on GrabFood`}><span className="grabfood-label">{language==='vi'?'Đặt qua':'Order on'} <strong>GrabFood</strong></span><ArrowUpRight size={17} aria-hidden="true"/></a><button onClick={()=>setRevealed(false)}>{t.continue}</button></div></>}</DialogContent></Dialog>
 
