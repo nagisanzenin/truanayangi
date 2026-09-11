@@ -191,25 +191,38 @@ html{scrollbar-gutter:stable}.reel-window{overflow:clip}.reel-track{transform:tr
   .brand-logo { width: 40px; height: 40px; }
 }
 
-/* Every keyframe below lists the same transform functions in the same order,
-   so the browser interpolates instead of snapping between them. */
+/* Rebuilt from case.gif: its crate only swivels about the vertical axis (frame
+   width varies 241-256px while height stays fixed), then the lid pops for the
+   last three of thirty-eight frames. Every keyframe repeats the same transform
+   functions in the same order so the browser interpolates instead of snapping. */
 @keyframes unlock-case {
-  0%   { transform: scale(.86) rotate(-4deg) translateY(0);     filter: brightness(.82) }
-  30%  { transform: scale(1) rotate(0deg) translateY(0);        filter: brightness(1) }
-  55%  { transform: scale(1.02) rotate(.6deg) translateY(-6px); filter: brightness(1.06) }
-  78%  { transform: scale(1.05) rotate(-.4deg) translateY(-2px);filter: brightness(1.18) }
-  100% { transform: scale(1.13) rotate(0deg) translateY(0);     filter: brightness(1.5) }
+  0%   { transform: scale(.86) rotateY(-13deg) translateY(0);   filter: brightness(.82) }
+  18%  { transform: scale(.98) rotateY(9deg) translateY(0);      filter: brightness(.96) }
+  34%  { transform: scale(1) rotateY(-11deg) translateY(-1px);   filter: brightness(1) }
+  50%  { transform: scale(1.02) rotateY(7deg) translateY(0);     filter: brightness(1.05) }
+  66%  { transform: scale(1.04) rotateY(-9deg) translateY(-1px); filter: brightness(1.1) }
+  82%  { transform: scale(1.06) rotateY(4deg) translateY(0);     filter: brightness(1.2) }
+  100% { transform: scale(1.13) rotateY(0deg) translateY(0);     filter: brightness(1.5) }
 }
+/* The lid opens over the final stretch, matching frames 35-37 of the original. */
+@keyframes unlock-shut { 0%,86% { opacity: 1 } 88%,100% { opacity: 0 } }
+@keyframes unlock-lid  { 0%,86% { opacity: 0 } 88%,100% { opacity: 1 } }
 @keyframes unlock-veil { from { opacity: 0 } to { opacity: 1 } }
 @keyframes unlock-veil-out { from { opacity: 1 } to { opacity: 0 } }
 @keyframes unlock-label { 0% { opacity: 0; transform: translateY(6px) } 40%,100% { opacity: 1; transform: translateY(0) } }
 
 .case-unlock { animation: unlock-veil .32s ease-out both }
 .case-unlock span { animation: unlock-label 1s ease-out both }
-.unlocking .case-unlock img { animation: unlock-case 2.4s cubic-bezier(.22,.61,.36,1) both }
-/* Hold the crate on its final frame while the veil fades over the spin. */
+.case-art { position: relative; width: 220px; height: 180px; perspective: 700px }
+.case-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain }
+.unlocking .case-art { animation: unlock-case 2.4s cubic-bezier(.22,.61,.36,1) both }
+.unlocking .case-shut { animation: unlock-shut 2.4s steps(1,end) both }
+.unlocking .case-lid  { animation: unlock-lid  2.4s steps(1,end) both }
+/* Hold the crate open on its final frame while the veil fades over the spin. */
 .case-unlock.closing { animation: unlock-veil-out .38s ease-in both; pointer-events: none }
-.case-unlock.closing img { transform: scale(1.13); filter: brightness(1.5) }
+.case-unlock.closing .case-art { transform: scale(1.13); filter: brightness(1.5) }
+.case-unlock.closing .case-shut { opacity: 0 }
+.case-unlock.closing .case-lid { opacity: 1 }
 
 .inventory-button{height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#d8dde1;border:1px solid #ffffff2b;background:#1d2932b8;font-size:13px}
 .inventory-button:hover:not(:disabled){background:#2b3a45;border-color:#ffffff4a}
@@ -237,6 +250,8 @@ html{scrollbar-gutter:stable}.reel-window{overflow:clip}.reel-track{transform:tr
 @media (prefers-reduced-motion: reduce) {
   .case-unlock { animation: unlock-veil .32s ease-out both !important }
   .case-unlock span { animation: unlock-label 1s ease-out both !important }
-  .unlocking .case-unlock img { animation: unlock-case 2.4s cubic-bezier(.22,.61,.36,1) both !important }
+  .unlocking .case-art { animation: unlock-case 2.4s cubic-bezier(.22,.61,.36,1) both !important }
+  .unlocking .case-shut { animation: unlock-shut 2.4s steps(1,end) both !important }
+  .unlocking .case-lid { animation: unlock-lid 2.4s steps(1,end) both !important }
   .case-unlock.closing { animation: unlock-veil-out .38s ease-in both !important }
 }
