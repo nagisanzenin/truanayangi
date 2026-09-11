@@ -87,7 +87,7 @@ export default function Home(){
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   setSpinning(true);setUnlocking(true);setResult(null);
   audio.current?.play('csgo_ui_crate_open');
-  unlockTimer.current=window.setTimeout(()=>{setUnlocking(false);spin(reducedMotion)},reducedMotion?0:OPENING_DELAY_MS);
+  unlockTimer.current=window.setTimeout(()=>{setUnlocking(false);spin(reducedMotion)},OPENING_DELAY_MS);
  }
  function spin(reducedMotion:boolean){
   if(!track.current||!viewport.current||!lunchSelector)return;

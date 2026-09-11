@@ -190,3 +190,9 @@ html{scrollbar-gutter:stable}.reel-window{overflow:clip}.reel-track{transform:tr
 @media (max-width: 640px) {
   .brand-logo { width: 40px; height: 40px; }
 }
+
+/* The crate-opening beat is the feature itself, so it plays even when the
+   global reduced-motion rule switches every other animation off. */
+@media (prefers-reduced-motion: reduce) {
+  .unlocking .case-unlock img { animation: unlock-case 2.4s ease-in-out both !important; }
+}
