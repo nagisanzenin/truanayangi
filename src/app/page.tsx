@@ -1,6 +1,6 @@
 import {readCookie,writeCookie} from '@/lib/cookies';
 'use client';
-import { createSpinProfile, spinProgress, createFoodSelector, stopFraction } from '@/lib/case-mechanics';
+import { createSpinProfile, spinProgress, createFoodSelector, stopFraction, OPENING_DELAY_MS } from '@/lib/case-mechanics';
 import { foods, type Food } from '@/lib/foods';
 import { copy, foodName, foodSubtitle, priceLabel, type Language } from '@/lib/i18n';
 import { useLocalSpinCount } from '@/hooks/use-local-spin-count';
@@ -8,9 +8,15 @@ import { PreferencesPanel } from '@/components/preferences-panel';
 import { usePreferences } from '@/hooks/use-preferences';
 import { personalFoods, personalSelector } from '@/lib/personal-pool';
 import { CaseAudio } from '@/lib/case-audio';
+import { ThemeMusic } from '@/lib/theme-music';
+import { useThemeMusic } from '@/hooks/use-theme-music';
+import { ThemeMusicSelect } from '@/components/theme-music-select';
+import { FoodImage, rarityColors } from '@/components/food-image';
+import { InventoryPanel } from '@/components/inventory-panel';
+import { useInventory } from '@/hooks/use-inventory';
 import { flushSync } from 'react-dom';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, AudioLines, Volume2, VolumeX, Sparkles, Utensils, Leaf } from 'lucide-react';
+import { ArrowUpRight, AudioLines, Volume2, VolumeX, Sparkles, Leaf } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
@@ -18,14 +24,7 @@ import { Switch } from '@/components/ui/switch';
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 
-const colors=['#4b69ff','#8847ff','#d32ce6','#eb4b4b','#e4ae39'];
-function FoodImage({food,language}:{food:Food;language:Language}){
- if(food.customId)return <div className="food-image custom-food-art" role="img" aria-label={food.name}><Utensils size={64}/></div>;
- const common=food.image>=120,lunch=food.image>=72&&!common,expanded=food.image>=36;
- const index=common?(food.image-120)%12:lunch?(food.image-72)%12:expanded?(food.image-36)%12:food.image%4;
- const atlas=common?`food-common-${Math.floor((food.image-120)/12)}`:lunch?`food-lunch-${Math.floor((food.image-72)/12)}`:expanded?`food-expanded-${Math.floor((food.image-36)/12)}`:`food-hd-${Math.floor(food.image/4)}`;
- return <div role="img" aria-label={foodName(food,language)} className="food-image" style={{clipPath:common?"inset(0 0 4% 0)":lunch?"inset(0 0 7% 0)":undefined,backgroundImage:`url(${basePath}/${atlas}.webp)`,backgroundSize:expanded?'400% 300%':'200% 200%',backgroundPosition:expanded?`${index%4/3*100}% ${(common?[0,50,100]:[0,46,92])[Math.floor(index/4)]}%`:`${index%2*100}% ${Math.floor(index/2)*100}%`}}/>
-}
+const colors=rarityColors;
 function MysteryArt({language}:{language:Language}){return <div className="mystery-art" role="img" aria-label={copy[language].mysteryAlt}>
  <div className="mystery-rays"/>
  <svg className="mystery-emblem" viewBox="0 0 240 150" aria-hidden="true">
@@ -38,13 +37,14 @@ function MysteryArt({language}:{language:Language}){return <div className="myste
  </svg>
  <div className="mystery-sheen"/>
 </div>}
-const Card=memo(function Card({food,language,small=false,slot}:{food:Food;language:Language;small?:boolean;slot?:number}){const mystery=!small&&food.rarity===4,t=copy[language];return <div className={`food-card ${small?'small':''} ${mystery?'mystery-card':''}`} data-slot-id={slot} data-food-id={food.image} style={{'--rarity':colors[food.rarity],...(slot===undefined?{}:{position:'absolute',left:slot*254})} as React.CSSProperties}><span className="tier">{t.tiers[food.rarity]}</span>{mystery?<MysteryArt language={language}/>:<FoodImage food={food} language={language}/>}<div className="card-copy"><strong>{mystery?t.mystery:foodName(food,language)}</strong><span>{small?priceLabel(food.price,language,true):foodSubtitle(food,language)}</span></div></div>});
+const Card=memo(function Card({food,language,small=false,slot,won=false}:{food:Food;language:Language;small?:boolean;slot?:number;won?:boolean}){const mystery=!small&&food.rarity===4,t=copy[language];return <div className={`food-card ${small?'small':''} ${mystery?'mystery-card':''} ${won?'landed':''}`} data-slot-id={slot} data-food-id={food.image} style={{'--rarity':colors[food.rarity],...(slot===undefined?{}:{position:'absolute',left:slot*254})} as React.CSSProperties}><span className="tier">{t.tiers[food.rarity]}</span>{mystery?<MysteryArt language={language}/>:<FoodImage food={food} language={language}/>}<div className="card-copy"><strong>{mystery?t.mystery:foodName(food,language)}</strong><span>{small?priceLabel(food.price,language,true):foodSubtitle(food,language)}</span></div></div>});
 
 export default function Home(){
  const {count:localSpins,enabled:counterEnabled,recordSpin}=useLocalSpinCount();
+ const inventory=useInventory();
  const [language,setLanguage]=useState<Language>('vi');
  const preferences=usePreferences();
- const [budget,setBudget]=useState('50'),[custom,setCustom]=useState('50'),[veg,setVeg]=useState(false),[sound,setSound]=useState(true),[spinning,setSpinning]=useState(false),[result,setResult]=useState<Food|null>(null),[revealed,setRevealed]=useState(false);
+ const [budget,setBudget]=useState('50'),[custom,setCustom]=useState('50'),[veg,setVeg]=useState(false),[sound,setSound]=useState(true),[spinning,setSpinning]=useState(false),[unlocking,setUnlocking]=useState(false),[closing,setClosing]=useState(false),[landed,setLanded]=useState<number|null>(null),[result,setResult]=useState<Food|null>(null),[revealed,setRevealed]=useState(false);
  const [reel,setReel]=useState(()=>foods.slice(0,12).map((food,id)=>({food,id}))),[moving,setMoving]=useState(false);
  const busy=useRef(false),viewport=useRef<HTMLDivElement>(null);
  useEffect(()=>{let selected:Language='vi';try{const saved=readCookie<string>('language');selected=saved==='en'||saved==='vi'?saved:'vi'}catch{}setLanguage(selected);document.documentElement.lang=selected;document.title=selected==='en'?'What should I eat for lunch?':'Trưa nay ăn gì?'},[]);
@@ -69,6 +69,38 @@ export default function Home(){
   document.addEventListener('visibilitychange',hide);
   return ()=>{document.removeEventListener('visibilitychange',hide);engine.dispose();audio.current=null};
  },[]);
+ const themeMusic=useThemeMusic();
+ const music=useRef<ThemeMusic|null>(null);
+ useEffect(()=>{
+  const engine=new ThemeMusic(basePath);music.current=engine;
+  const hide=()=>{if(document.hidden)engine.pause();else engine.recover()};
+  document.addEventListener('visibilitychange',hide);
+  return ()=>{document.removeEventListener('visibilitychange',hide);engine.dispose();music.current=null};
+ },[]);
+ useEffect(()=>{if(themeMusic.ready)music.current?.setKit(themeMusic.kit)},[themeMusic.ready,themeMusic.kit]);
+ useEffect(()=>{music.current?.setMuted(!sound)},[sound]);
+ // Ducked for the whole open-to-result beat; restored once the winner dialog
+ // closes, however it closes (Continue, Esc, backdrop click).
+ useEffect(()=>{if(!revealed)music.current?.duck(false)},[revealed]);
+ useEffect(()=>{
+  // One delegated listener covers every button/option without wiring each
+  // one by hand; the Open button keeps its own dedicated crate-open cue.
+  const click=(e:MouseEvent)=>{
+   const target=(e.target as HTMLElement).closest('button,[role=option],[role=menuitem]');
+   if(!target||target.closest('.open-button')||target.hasAttribute('disabled'))return;
+   audio.current?.play('csgo_ui_button_click');
+  };
+  document.addEventListener('click',click);
+  return ()=>document.removeEventListener('click',click);
+ },[]);
+ useEffect(()=>{
+  // Both audio engines need their own gesture-unlocked AudioContext/<audio>;
+  // the page's first click/tap anywhere covers both, so UI clicks and the
+  // background music work before anyone has pressed Open.
+  const unlock=()=>{music.current?.unlock();audio.current?.unlock();window.removeEventListener('pointerdown',unlock)};
+  window.addEventListener('pointerdown',unlock,{once:true});
+  return ()=>window.removeEventListener('pointerdown',unlock);
+ },[]);
  const [visibleStart,setVisibleStart]=useState(0);
  const t=copy[language];
  const inventoryCards=useMemo(()=>[...eligible].sort((a,b)=>a.rarity-b.rarity||a.price-b.price||foodName(a,language).localeCompare(foodName(b,language),language)).map(f=><Card food={f} language={language} small key={f.customId??f.image}/>),[eligible,language]);
@@ -77,19 +109,31 @@ export default function Home(){
  const position=useRef(-400);
  const attachTrack=useCallback((node:HTMLDivElement|null)=>{track.current=node;if(node)node.style.transform=`translate3d(${position.current}px,0,0)`},[]);
  const frame=useRef(0);
+ const unlockTimer=useRef(0),dropTimer=useRef(0),revealTimer=useRef(0);
  useEffect(()=>{if(spinning||!eligible.length||!lunchSelector)return;setReel(current=>current.map(item=>({...item,food:eligible.find(f=>(f.customId??f.image)===(item.food.customId??item.food.image))??lunchSelector.choose(eligible)})))},[eligible,lunchSelector,spinning]);
- useEffect(()=>()=>{cancelAnimationFrame(frame.current)},[]);
+ useEffect(()=>()=>{cancelAnimationFrame(frame.current);window.clearTimeout(unlockTimer.current);window.clearTimeout(dropTimer.current);window.clearTimeout(revealTimer.current)},[]);
  function open(){
   if(busy.current||!validTarget||!eligible.length||!lunchSelector||!track.current||!viewport.current)return;
   audio.current?.unlock();
+  music.current?.duck(true);
   busy.current=true;
+  setSpinning(true);setUnlocking(true);setResult(null);setLanded(null);
+  // The crate lands, then the unlock cue builds so its peak lands on the flare
+  // at the end of the intro.
+  audio.current?.play('csgo_ui_crate_drop');
+  dropTimer.current=window.setTimeout(()=>audio.current?.play('csgo_ui_crate_unlock'),600);
+  // The veil fades out over the first frames of the spin, so the two beats
+  // overlap instead of cutting.
+  unlockTimer.current=window.setTimeout(()=>{setClosing(true);spin();unlockTimer.current=window.setTimeout(()=>{setUnlocking(false);setClosing(false)},380)},OPENING_DELAY_MS);
+ }
+ function spin(){
+  if(!track.current||!viewport.current||!lunchSelector)return;
   const winner=lunchSelector.choose(eligible);
 
   const step=254,tileWidth=240,width=viewport.current.clientWidth;
   const start=position.current;
   const center=Math.floor((width/2-start)/step);
-  const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const profile=createSpinProfile(Math.random,reducedMotion);
+  const profile=createSpinProfile();
   const target=center+profile.tiles;
   const end=width/2-tileWidth*stopFraction()-target*step;
   // Keep visible cards at permanent world coordinates. Generate new cards
@@ -97,14 +141,13 @@ export default function Home(){
   const rightEdge=Math.ceil((width-start)/step)+1;
   const items=reel.filter(item=>item.id>=center-Math.ceil(width/step)-2&&item.id<=rightEdge);
   const last=Math.max(...items.map(item=>item.id));
-  const recent:Food[]=[];
+  // No anti-repeat window: like a real CS:GO reel, filler tiles are drawn
+  // independently, so the same dish can appear more than once in a spin.
   for(let id=last+1;id<=target+4;id++){
-   const alternatives=eligible.filter(food=>!recent.includes(food)&&(lunchSelector.probabilities.get(food)??0)>0);
-   const food=id===target?winner:lunchSelector.choose(alternatives.length?alternatives:eligible);
-   items.push({id,food});recent.push(food);if(recent.length>8)recent.shift();
+   const food=id===target?winner:lunchSelector.choose(eligible);
+   items.push({id,food});
   }
   flushSync(()=>{setReel(items);setSpinning(true);setMoving(true);setResult(null)});
-  audio.current?.play('csgo_ui_crate_open');
   const duration=profile.durationMs;
   const started=performance.now();
   let renderedStart=visibleStart;
@@ -122,9 +165,13 @@ export default function Home(){
    const cell=Math.floor((next-width/2)/step);
    if(cell!==lastCell){audio.current?.play('csgo_ui_crate_item_scroll');lastCell=cell}
    if(progress<1){frame.current=requestAnimationFrame(animate);return}
-   recordSpin(winner);
-   busy.current=false;setSpinning(false);setMoving(false);setResult(winner);setRevealed(true);
+   recordSpin(winner);inventory.record(winner);
+   busy.current=false;setSpinning(false);setMoving(false);setResult(winner);
+   // Let the winning tile settle and glow under the pointer before the dialog
+   // takes over the screen; landing both in one frame reads as a hard cut.
+   setLanded(target);
    audio.current?.play((['item_reveal3_rare','item_reveal4_mythical','item_reveal5_legendary','item_reveal6_ancient','item_reveal6_ancient'] as const)[winner.rarity]);
+   revealTimer.current=window.setTimeout(()=>setRevealed(true),900);
   };
   frame.current=requestAnimationFrame(animate);
  }
@@ -135,13 +182,13 @@ export default function Home(){
    <source media="(max-width: 900px)" srcSet={`${basePath}/brand/icon-cs-v2.webp`}/>
    <img className="brand-logo" src={`${basePath}/brand/logo-cs-v2.webp`} width={180} height={60} alt="Trưa Nay Ăn Gì" fetchPriority="high"/>
   </picture>
- </a><div className="header-actions"><PreferencesPanel preferences={preferences} language={language} disabled={spinning}/><button className="language-button" onClick={()=>changeLanguage(language==='vi'?'en':'vi')} aria-label={t.language}>{language==='vi'?'EN':'VI'}</button><button className="sound-button" onClick={()=>{audio.current?.setMuted(sound);setSound(!sound)}} aria-label={sound?t.turnSoundOff:t.turnSoundOn}>{sound?<Volume2 size={18}/>:<VolumeX size={18}/>}<span>{sound?t.soundOn:t.soundOff}</span></button><a className="social-button facebook-button" href="https://www.facebook.com/share/g/19S49GH46A/" target="_blank" rel="noreferrer" aria-label={language==='vi'?'Tham gia nhóm Facebook Trưa Nay Ăn Gì':'Join the Trưa Nay Ăn Gì Facebook group'}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.2 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5h1.7V3.6c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.1H8V13h2.8v8h3.4Z"/></svg><span>Facebook</span></a><a className="github-button" href="https://github.com/truanayangi-com/truanayangi" target="_blank" rel="noreferrer" aria-label={t.github}><svg className="github-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.49v-1.91c-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.66.35-1.12.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.96a9.3 9.3 0 0 1 2.5.35c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.89v2.8c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg><span className="github-label">GitHub</span></a></div></header>
+ </a><div className="header-actions"><InventoryPanel inventory={inventory.items} population={population} language={language} disabled={spinning} storageError={!!inventory.error} onTradeUp={(spent,food)=>{inventory.spend(spent);inventory.record(food)}}/><PreferencesPanel preferences={preferences} language={language} disabled={spinning}/><button className="language-button" onClick={()=>changeLanguage(language==='vi'?'en':'vi')} aria-label={t.language}>{language==='vi'?'EN':'VI'}</button><ThemeMusicSelect kit={themeMusic.kit} language={language} onChange={themeMusic.setKit}/><button className="sound-button" onClick={()=>{audio.current?.setMuted(sound);setSound(!sound)}} aria-label={sound?t.turnSoundOff:t.turnSoundOn}>{sound?<Volume2 size={18}/>:<VolumeX size={18}/>}<span>{sound?t.soundOn:t.soundOff}</span></button><a className="social-button facebook-button" href="https://www.facebook.com/share/g/19S49GH46A/" target="_blank" rel="noreferrer" aria-label={language==='vi'?'Tham gia nhóm Facebook Trưa Nay Ăn Gì':'Join the Trưa Nay Ăn Gì Facebook group'}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.2 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5h1.7V3.6c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.1H8V13h2.8v8h3.4Z"/></svg><span>Facebook</span></a><a className="github-button" href="https://github.com/truanayangi-com/truanayangi" target="_blank" rel="noreferrer" aria-label={t.github}><svg className="github-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.49v-1.91c-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.66.35-1.12.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.96a9.3 9.3 0 0 1 2.5.35c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.89v2.8c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg><span className="github-label">GitHub</span></a></div></header>
  <main><>{cookieError&&<p role="status" className="preferences-message">{cookieError}</p>}<div className="intro"><h1>{t.title}</h1></div>
  {!eligible.length&&<p className="preferences-message">{language==='vi'?'Pool không có món phù hợp. Tắt bộ lọc chay hoặc thêm món.':'No matching dishes. Turn off the vegetarian filter or add dishes.'}</p>}
  {counterEnabled&&<p className="local-counter" title={language==='vi'?'Lượt mở trên trình duyệt này, lưu bằng cookie':'Spins on this browser, stored in cookies'}>{language==='vi'?'Bạn đã mở':'You have opened'} <strong>{localSpins===null?'—':new Intl.NumberFormat(language==='vi'?'vi-VN':'en-US').format(localSpins)}</strong> {language==='vi'?'hòm trên trình duyệt này':'cases on this browser'}</p>}
  {result&&!spinning&&<p className="local-counter">{language==='vi'?'Lựa chọn gần nhất: ':'Last choice: '}<strong>{foodName(result,language)}</strong></p>}
  <section className="case-panel" aria-label={t.caseLabel}>
- <div className={`reel-window ${moving?'is-spinning':''} `} ref={viewport}><div className="selector-line"/><div className="reel-track" ref={attachTrack}>{reel.filter(({id})=>id>=visibleStart&&id<visibleStart+12).map(({food,id})=><Card key={id} food={food} language={language} slot={id}/>)}</div><div className="reel-fade left"/><div className="reel-fade right"/></div></section>
+ <div className={`reel-window ${moving?'is-spinning':''} ${unlocking&&!closing?'unlocking':''}`} ref={viewport}>{unlocking&&<div className={`case-unlock ${closing?'closing':''}`} role="status"><div className="case-art"><img className="case-shut" src={`${basePath}/case.png`} alt="" width={220} height={180}/><img className="case-lid" src={`${basePath}/case-opened.png`} alt="" width={220} height={180}/></div><span>{t.opening}</span></div>}<div className="selector-line"/><div className="reel-track" ref={attachTrack}>{reel.filter(({id})=>id>=visibleStart&&id<visibleStart+12).map(({food,id})=><Card key={id} food={food} language={language} slot={id} won={landed===id}/>)}</div><div className="reel-fade left"/><div className="reel-fade right"/></div></section>
  <div className="control-bar"><div className="filters"><div className="budget"><label id="budget-label">{t.spend}</label><Select value={budget} onValueChange={v=>setBudget(v??'50')} disabled={spinning}><SelectTrigger aria-labelledby="budget-label"><SelectValue>{budget==='custom'?t.custom:priceLabel(budget,language)}</SelectValue></SelectTrigger><SelectContent>{['35','50','75','100','150'].map(v=><SelectItem key={v} value={v}>{priceLabel(v,language)}</SelectItem>)}<SelectItem value="custom">{t.custom}</SelectItem></SelectContent></Select>{budget==='custom'&&<div className="custom-spend"><input aria-label={t.customSpend} aria-invalid={!validTarget} type="number" inputMode="numeric" min="30" max="180" step="1" value={custom} disabled={spinning} onChange={e=>setCustom(e.target.value)}/><span>{t.thousandPerMeal}</span></div>}{!validTarget&&<small className="spend-note" role="alert">{t.spendError}</small>}{validTarget&&eligible.length>0&&(veg||Math.abs(filteredMean-target)>.5)&&<small className="spend-note">{t.vegetarianPool} {priceLabel(Math.round(filteredMean),language,true)} / {language==='vi'?'bữa':'meal'}</small>}</div><label className="veg"><Switch checked={veg} onCheckedChange={setVeg} disabled={spinning} aria-label={t.vegetarianOnly}/><span><Leaf size={15}/> {t.vegetarian}</span></label></div><div className="open-wrap"><button className="open-button" disabled={spinning||!validTarget||!eligible.length} onClick={open}>{spinning?<AudioLines size={22}/>:<Sparkles size={21}/>} {spinning?t.opening:result?t.openAgain:t.open} <span>↗</span></button></div></div>
  <Dialog open={revealed} onOpenChange={setRevealed}><DialogContent className="winner-dialog" showCloseButton={false}>{result&&<><span className="winner-label">{t.newItem}</span><DialogTitle className="winner-title">{foodName(result,language)}</DialogTitle><DialogDescription className="winner-description">{t.referencePrice} · {priceLabel(result.price,language,true)} {t.perPerson}</DialogDescription><div className="winner-art" style={{'--rarity':colors[result.rarity]} as React.CSSProperties}><FoodImage food={result} language={language}/></div><div className="winner-actions"><a className="find-button" href={`https://www.google.com/maps/search/${encodeURIComponent(result.name+' '+t.nearby)}`} target="_blank" rel="noreferrer">{t.find} <ArrowUpRight size={16}/></a><a className="grabfood-button" href={`https://food.grab.com/vn/vi/restaurants?${new URLSearchParams({search:result.name,'support-deeplink':'true',searchParameter:result.name})}`} target="_blank" rel="noreferrer" aria-label={language==='vi'?`Đặt ${result.name} qua GrabFood`:`Find ${foodName(result,language)} on GrabFood`}><span className="grabfood-label">{language==='vi'?'Đặt qua':'Order on'} <strong>GrabFood</strong></span><ArrowUpRight size={17} aria-hidden="true"/></a><button onClick={()=>setRevealed(false)}>{t.continue}</button></div></>}</DialogContent></Dialog>
 

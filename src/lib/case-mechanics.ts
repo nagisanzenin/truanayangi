@@ -10,6 +10,20 @@ export const TARGET_LUNCH_PRICE = 50;
 export const LOG_PRICE_SPREAD = .35;
 export function caseEase(progress:number){const p=Math.max(0,Math.min(1,progress));let lo=0,hi=1;for(let i=0;i<30;i++){const t=(lo+hi)/2,u=1-t,x=3*u*u*t*.075+3*u*t*t*.165+t*t*t;if(x<p)lo=t;else hi=t}const t=(lo+hi)/2,u=1-t;return 3*u*u*t*.82+3*u*t*t+t*t*t}
 type PricedMeal={price:number;rarity:number};
+// A cheap case still keeps a small shot at the top rarity tier (CS:GO cases all
+// carry roughly the same gold odds); a pricier case shifts weight toward higher
+// tiers as target rises. The reshaped prior below only nudges the tilt loop's
+// starting point — the loop still forces the realized mean back to `target`.
+const MIN_RARITY=0,MAX_RARITY=4;
+export function rarityTiltFor(target:number){
+ const spread=Math.log(target/TARGET_LUNCH_PRICE)/LOG_PRICE_SPREAD;
+ return Math.max(-1.4,Math.min(1.4,spread*.85));
+}
+// Top-tier floor, as a share of total probability. Log-space reshaping alone
+// cannot keep gold visible at the cheapest target (price penalty dominates),
+// so a fixed slice is carved out for it directly, split by relative price
+// among gold-tier items; the remaining mass still tilts by price to hit target.
+const GOLD_FLOOR=.0015;
 export function createFoodSelector<T extends PricedMeal>(population:T[],target=TARGET_LUNCH_PRICE){
  if(!population.length)throw new Error('No meals in population');
  if(!Number.isFinite(target)||target<=0)throw new Error('Invalid target');
@@ -21,7 +35,11 @@ export function createFoodSelector<T extends PricedMeal>(population:T[],target=T
  const counts=new Map<number,number>();
  population.forEach(f=>counts.set(f.price,(counts.get(f.price)||0)+1));
  const logs=population.map(f=>Math.log(f.price/50));
- const prior=logs.map((x,i)=>-.5*(x/LOG_PRICE_SPREAD)**2-Math.log(counts.get(population[i].price)!));
+ const rarityTilt=rarityTiltFor(target);
+ const prior=logs.map((x,i)=>{
+  const rarity=Math.max(MIN_RARITY,Math.min(MAX_RARITY,population[i].rarity));
+  return -.5*(x/LOG_PRICE_SPREAD)**2-Math.log(counts.get(population[i].price)!)+rarityTilt*(rarity-2);
+ });
  function weights(tilt:number){
   const logits=logs.map((x,i)=>prior[i]+tilt*x),anchor=Math.max(...logits);
   const raw=logits.map(x=>Math.exp(x-anchor)),sum=raw.reduce((s,x)=>s+x,0);
@@ -36,6 +54,43 @@ export function createFoodSelector<T extends PricedMeal>(population:T[],target=T
   while(mean(weights(hi))<target)hi*=2;
   for(let i=0;i<80;i++){const mid=(lo+hi)/2;if(mean(weights(mid))<target)lo=mid;else hi=mid}
   raw=weights((lo+hi)/2);
+ }
+ // Below the floor, scale gold up to it (keeping its internal shape, so the
+ // priciest gold items are still more likely within the tier) and re-tilt
+ // every other item by price so the overall mean still lands exactly on
+ // target, the same binary search used above but scoped to the non-gold rest.
+ const goldIdx=population.map((f,i)=>f.rarity>=MAX_RARITY?i:-1).filter(i=>i>=0);
+ const isGold=new Set(goldIdx);
+ if(goldIdx.length&&goldIdx.length<population.length){
+  const goldRawSum=goldIdx.reduce((s,i)=>s+raw[i],0);
+  const floorTotal=Math.min(GOLD_FLOOR,.5);
+  if(goldRawSum>0&&goldRawSum<floorTotal){
+   const restIdx=population.map((_,i)=>i).filter(i=>!isGold.has(i));
+   const restMin=Math.min(...restIdx.map(i=>population[i].price)),restMax=Math.max(...restIdx.map(i=>population[i].price));
+   const goldMean=population.reduce((s,f,i)=>s+(isGold.has(i)?f.price*raw[i]:0),0)/goldRawSum;
+   const wantedRestMean=(target-floorTotal*goldMean)/(1-floorTotal);
+   // Only reshape if the remaining tiers can actually average out to what the
+   // floor requires; otherwise leave the untouched, target-matched raw as is.
+   if(wantedRestMean>=restMin&&wantedRestMean<=restMax){
+    const restLogs=restIdx.map(i=>logs[i]);
+    const restWeights=(tilt:number)=>{
+     const anchor=Math.max(...restIdx.map(i=>prior[i]));
+     const w=restIdx.map((i,j)=>Math.exp(prior[i]+tilt*restLogs[j]-anchor));
+     const sum=w.reduce((s,x)=>s+x,0);
+     return w.map(x=>x/sum);
+    };
+    const restMeanFor=(w:number[])=>restIdx.reduce((s,i,j)=>s+population[i].price*w[j],0);
+    let lo=-4,hi=4;
+    while(restMeanFor(restWeights(lo))>wantedRestMean&&lo>-64)lo*=2;
+    while(restMeanFor(restWeights(hi))<wantedRestMean&&hi<64)hi*=2;
+    for(let i=0;i<80;i++){const mid=(lo+hi)/2;if(restMeanFor(restWeights(mid))<wantedRestMean)lo=mid;else hi=mid}
+    const restW=restWeights((lo+hi)/2);
+    const goldScale=floorTotal/goldRawSum;
+    const nextRaw=population.map((f,i)=>isGold.has(i)?raw[i]*goldScale:0);
+    for(let j=0;j<restIdx.length;j++)nextRaw[restIdx[j]]=restW[j]*(1-floorTotal);
+    raw=nextRaw;
+   }
+  }
  }
  const probabilities=new Map(population.map((f,i)=>[f,raw[i]]));
  function weighted(items:T[]){

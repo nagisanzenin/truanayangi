@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/cookies.test.mjs tests/case-mechanics.test.mjs && node tests/personal-pool.cjs",
+    "test": "node --test tests/cookies.test.mjs tests/case-mechanics.test.mjs tests/inventory.test.mjs && node tests/personal-pool.cjs",
     "typecheck": "tsc --noEmit",
     "start": "vite --host 127.0.0.1"
   },
