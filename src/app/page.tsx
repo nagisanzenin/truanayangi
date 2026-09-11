@@ -82,9 +82,10 @@ export default function Home(){
   audio.current?.unlock();
   busy.current=true;
   setSpinning(true);setUnlocking(true);setResult(null);
-  // The crate lands first; the lid pops as the artwork flares at the end of the intro.
+  // The crate lands, then the unlock cue builds so its peak lands on the flare
+  // at the end of the intro.
   audio.current?.play('csgo_ui_crate_drop');
-  dropTimer.current=window.setTimeout(()=>audio.current?.play('csgo_ui_crate_open'),OPENING_DELAY_MS-700);
+  dropTimer.current=window.setTimeout(()=>audio.current?.play('csgo_ui_crate_unlock'),600);
   // The veil fades out over the first frames of the spin, so the two beats
   // overlap instead of cutting.
   unlockTimer.current=window.setTimeout(()=>{setClosing(true);spin();unlockTimer.current=window.setTimeout(()=>{setUnlocking(false);setClosing(false)},380)},OPENING_DELAY_MS);
