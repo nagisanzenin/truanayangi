@@ -11,6 +11,6 @@ export function ThemeMusicSelect({ kit, language, onChange }: Props) {
   <SelectTrigger className="theme-music-trigger" aria-label={t.themeMusicLabel}>
    <Music2 size={15} /><SelectValue>{musicKits.find(k => k.id === kit)?.artist ?? kit}</SelectValue>
   </SelectTrigger>
-  <SelectContent>{musicKits.map(k => <SelectItem key={k.id} value={k.id}>{k.artist}</SelectItem>)}</SelectContent>
+  <SelectContent className="theme-music-content">{musicKits.map(k => <SelectItem key={k.id} value={k.id}>{k.artist}</SelectItem>)}</SelectContent>
  </Select>;
 }

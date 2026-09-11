@@ -12,12 +12,14 @@ export class ThemeMusic {
  private activated = false;
  private ducked = false;
  private static readonly VOLUME = .45;
+ private static readonly DUCK_FACTOR = .36;
  constructor(private base: string) {}
+ private currentVolume() { return this.ducked ? ThemeMusic.VOLUME * ThemeMusic.DUCK_FACTOR : ThemeMusic.VOLUME; }
  private element() {
   if (this.el) return this.el;
   const el = new Audio();
   el.loop = true;
-  el.volume = ThemeMusic.VOLUME;
+  el.volume = this.currentVolume();
   el.preload = 'auto';
   this.el = el;
   return el;
@@ -25,14 +27,14 @@ export class ThemeMusic {
  /** Lower the theme under the crate-open sting, then bring it back. */
  duck(down: boolean) {
   this.ducked = down;
-  if (this.el) this.el.volume = down ? ThemeMusic.VOLUME * .2 : ThemeMusic.VOLUME;
+  if (this.el) this.el.volume = this.currentVolume();
  }
  setKit(kit: string) {
   this.kit = musicKitIds.has(kit) ? kit : defaultMusicKit;
   const el = this.element();
   const wasPlaying = !el.paused;
   el.src = `${this.base}/sounds/music/${this.kit}.mp3`;
-  el.volume = this.ducked ? ThemeMusic.VOLUME * .2 : ThemeMusic.VOLUME;
+  el.volume = this.currentVolume();
   if (wasPlaying || this.activated) void el.play().catch(() => {});
  }
  // Call synchronously from a click/tap so the browser's autoplay gesture still counts.
