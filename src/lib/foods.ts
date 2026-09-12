@@ -1,5 +1,17 @@
 import { priceRarity } from './case-mechanics';
-export type Food={customId?:string;name:string;sub:string;price:number;rarity:number;image:number;veg?:boolean;quip:string};
+// north/central/south: dishes tied to a region; national: common across Vietnam;
+// intl: non-Vietnamese dishes. Custom dishes are always kept regardless of filter.
+export type Region='north'|'central'|'south'|'national'|'intl';
+export type Food={customId?:string;name:string;sub:string;price:number;rarity:number;image:number;veg?:boolean;quip:string;region:Region};
+const regionByImage:Record<number,Region>={
+ 0:'south',1:'north',2:'national',3:'north',7:'national',9:'central',10:'central',11:'south',12:'central',
+ 13:'national',14:'north',15:'north',16:'north',17:'national',18:'south',19:'north',20:'national',21:'central',
+ 22:'south',23:'national',32:'national',33:'national',34:'national',35:'south',36:'national',39:'south',
+ 42:'north',43:'south',44:'south',47:'national',48:'south',62:'national',71:'national',72:'north',73:'north',
+ 74:'north',75:'north',76:'south',77:'south',78:'national',79:'south',80:'national',81:'north',82:'south',
+ 83:'north',84:'central',85:'central',87:'south',89:'national',120:'north',121:'national',122:'national',
+ 123:'north',124:'south',125:'south',126:'south',127:'south',131:'national',
+};
 // Approximate lunch portion prices in thousands of VND, not restaurant quotes.
 export const foods:Food[]=[
   {
@@ -975,4 +987,4 @@ export const foods:Food[]=[
   "quip": "Miến này không phải miếng mồi deadline.",
   "image": 131
 }
-].map(food=>({...food,rarity:priceRarity(food.price)}));
+].map(food=>({...food,rarity:priceRarity(food.price),region:regionByImage[food.image]??'intl'}));

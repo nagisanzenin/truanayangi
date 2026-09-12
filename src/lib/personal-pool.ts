@@ -19,7 +19,7 @@ export function validateProfile(input: unknown): PoolProfile {
  return {disabled:p.disabled as number[],custom,revision:p.revision as number};
 }
 export function personalFoods(profile: PoolProfile): Food[] {
- return [...foods.filter(f=>!profile.disabled.includes(f.image)), ...profile.custom.map(f=>({...f,customId:f.id,image:-1,sub:'Món của tôi',quip:'',rarity:priceRarity(f.price)}))];
+ return [...foods.filter(f=>!profile.disabled.includes(f.image)), ...profile.custom.map(f=>({...f,customId:f.id,image:-1,sub:'Món của tôi',quip:'',rarity:priceRarity(f.price),region:'national' as const}))];
 }
 export function personalSelector(population: Food[], target: number) {
  if(!population.length) return null;
