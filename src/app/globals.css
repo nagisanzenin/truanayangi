@@ -190,3 +190,17 @@ html{scrollbar-gutter:stable}.reel-window{overflow:clip}.reel-track{transform:tr
 @media (max-width: 640px) {
   .brand-logo { width: 40px; height: 40px; }
 }
+
+/* UX refresh: primary action centered under the reel, filters secondary */
+.control-bar{flex-direction:column;align-items:center;gap:26px}
+.filters{justify-content:center;flex-wrap:wrap;row-gap:16px}
+.veg{padding-top:0}
+.budget{margin-bottom:0}
+.open-wrap{order:-1;width:100%;display:flex;justify-content:center}
+.open-button{min-width:300px;padding:18px 40px}
+@media(max-width:640px){.open-button{min-width:0}}
+
+/* Progressive inventory: render a slice, expand on demand */
+.inventory-more{display:flex;justify-content:center;padding:28px 0 8px}
+.inventory-more button{min-height:44px;padding:12px 26px;border:1px solid #ffffff30;background:#1e2b3680;color:#d8dde1;font-size:13px}
+.inventory-more button:hover{background:#2b3a45;border-color:#ffffff4a}
