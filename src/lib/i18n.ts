@@ -14,6 +14,7 @@ export const copy = {
     vegetarianOnly: 'Chỉ ăn chay', vegetarian: 'Ăn chay', opening: 'ĐANG MỞ HÒM…', openAgain: 'MỞ LẠI', open: 'MỞ HÒM',
     newItem: 'VẬT PHẨM MỚI', referencePrice: 'Giá tham khảo', perPerson: '/ người', find: 'TÌM QUÁN', continue: 'TIẾP TỤC', nearby: 'gần đây',
     whatsInside: 'TRONG HÒM CÓ GÌ?', items: 'Vật phẩm trong hòm', mystery: '★ MÓN BÍ ẨN', mysteryAlt: 'Món bí ẩn hạng vàng',
+    showMore: 'Hiện thêm', dishes: 'món',
     footer: 'Fan-made · SFX: Valve /', lunchDish: 'Món ăn trưa', vegetarianDish: 'Chay',
   },
   en: {
@@ -27,6 +28,7 @@ export const copy = {
     vegetarianOnly: 'Vegetarian only', vegetarian: 'Vegetarian', opening: 'OPENING CASE…', openAgain: 'OPEN AGAIN', open: 'OPEN CASE',
     newItem: 'NEW ITEM', referencePrice: 'Typical price', perPerson: '/ person', find: 'FIND NEARBY', continue: 'CONTINUE', nearby: 'near me',
     whatsInside: "WHAT'S IN THE CASE?", items: 'Items in this case', mystery: '★ MYSTERY DISH', mysteryAlt: 'Gold-tier mystery dish',
+    showMore: 'Show', dishes: 'more dishes',
     footer: 'Fan-made · SFX: Valve /', lunchDish: 'Lunch dish', vegetarianDish: 'Vegetarian',
   },
 } as const;
