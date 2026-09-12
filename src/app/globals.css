@@ -190,3 +190,7 @@ html{scrollbar-gutter:stable}.reel-window{overflow:clip}.reel-track{transform:tr
 @media (max-width: 640px) {
   .brand-logo { width: 40px; height: 40px; }
 }
+
+/* Winner dialog share button */
+.share-button{display:flex;align-items:center;gap:8px;border:1px solid #ffffff35;background:#ffffff10;color:#e3e5e7;padding:12px 18px;font-size:14px;white-space:nowrap}
+.share-button:hover:not(:disabled){background:#ffffff1c}
